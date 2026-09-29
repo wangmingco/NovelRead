@@ -65,14 +65,16 @@ function normalizeText(raw) {
   return String(raw).replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
 }
 
-/** 清掉正文里混进来的 HTML（盗版站常塞广告脚本和 <br>） */
-export function cleanInline(s) {
+/** 清掉正文里混进来的 HTML（盗版站常塞广告脚本、并用多层实体转义绕过清洗） */
+function stripOnce(s) {
   return String(s)
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/?(?:p|div|center|font|span|strong|b|em|i|u|h[1-6])[^>]*>/gi, '\n')
     .replace(/<\/?[a-zA-Z][^>]*>/g, '')
+    // 文件被截断时结尾可能留下半个标签，例如 "<fieldset"
+    .replace(/<[a-zA-Z][^>]*$/, '')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
@@ -81,6 +83,21 @@ export function cleanInline(s) {
     .replace(/&#(\d{1,6});/g, (_, d) => String.fromCodePoint(Number(d)))
     .replace(/&#x([0-9a-f]{1,5});/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
     .replace(/&amp;/gi, '&');
+}
+
+/**
+ * 反复清洗直到结果稳定。
+ * 因为源文件里可能是 &amp;lt;div&amp;gt; 这种多层转义，
+ * 解一次实体反而会「生成」新的标签，所以要迭代到不再变化为止。
+ */
+export function cleanInline(s) {
+  let out = String(s);
+  for (let i = 0; i < 5; i++) {
+    const next = stripOnce(out);
+    if (next === out) break;
+    out = next;
+  }
+  return out;
 }
 
 /** 按句子边界把过长的文本切成若干片 */
@@ -175,12 +192,14 @@ export function splitChapters(raw) {
     else first.title = '卷首';
   }
 
-  // 丢掉「有标题但没正文」的：多半是分卷标记、重复标题
+  // 先看识别出的标题够不够多（太少说明标题规则没命中，改用按长度切分）
+  const realHeads = out.filter((c) => c.title).length;
+  if (realHeads < 2) return splitByLength(cleanInline(text));
+
+  // 再丢掉「有标题但没正文」的：多半是分卷标记、重复标题
   const withBody = out.filter((c) => c.content.length > 0);
   const list = withBody.length ? withBody : out;
 
-  const realHeads = list.filter((c) => c.title).length;
-  if (realHeads < 2) return splitByLength(cleanInline(text));
   return list.map((c) => ({ title: c.title || '正文', content: c.content }));
 }
 

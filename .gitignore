@@ -4,3 +4,6 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# 原始小说源文件（GBK/GB18030 的大 txt）体积很大，只提交构建产物 *.json.gz
+data/books/*.txt

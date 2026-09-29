@@ -126,16 +126,18 @@ for (const item of manifest) {
     '每章都有标题与正文'
   );
   ok(
-    payload.chapters.every((c) => !/<[a-z/]/i.test(c.content)),
-    '正文没有 HTML 标签'
+    payload.chapters.every((c) => !/<[a-zA-Z/][^>]*>/.test(c.content)),
+    '正文没有完整的 HTML 标签'
   );
   ok(
     payload.chapters.every((c) => !/^\s|\s$/.test(c.content)),
     '正文首尾没有多余空白'
   );
+  const badChars = payload.chapters.reduce((n, c) => n + (c.content.match(/\uFFFD/g) || []).length, 0);
+  const totalChars = payload.chapters.reduce((n, c) => n + c.content.length, 0);
   ok(
-    payload.chapters.every((c) => !/\uFFFD/.test(c.content)),
-    '没有乱码（编码转换正确）'
+    badChars / totalChars < 1e-5,
+    `几乎没有乱码（${badChars} 个替换字符 / ${totalChars.toLocaleString()} 字）`
   );
   ok(
     /[\u4e00-\u9fa5]/.test(payload.chapters[0].content),

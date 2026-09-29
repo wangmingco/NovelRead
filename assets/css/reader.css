@@ -330,7 +330,7 @@ input[type='range']::-moz-range-thumb {
 .reader-hint {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--safe-b) + 74px);
+  bottom: calc(var(--safe-b) + 132px);
   transform: translateX(-50%);
   z-index: 30;
   max-width: calc(100% - 48px);

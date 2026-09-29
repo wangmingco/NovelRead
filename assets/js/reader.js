@@ -6,7 +6,7 @@ import {
   $, escapeHtml, clamp, debounce, nextFrame, hasSelection, isTouchDevice, vibrate, clockText, relTime,
 } from './util.js';
 import { idbGet, idbPut, idbAllBy, idbDelete, idbRemoveBook, getChunk } from './db.js';
-import { toast, openSheet, closeSheet, confirmDialog, bookPercent, percentLabel } from './ui.js';
+import { toast, openSheet, closeSheet, confirmDialog, bookPercent } from './ui.js';
 import { settings, onSettings } from './store.js';
 import { renderSettingsPanel, setupSettingsPanel } from './settings-panel.js';
 
@@ -314,7 +314,8 @@ function updateUI() {
   const pct = bookPct();
 
   els.seekChapter.textContent = `第 ${S.index + 1} / ${total} 章`;
-  els.seekPercent.textContent = percentLabel(pct);
+  // 这里用纯数字百分比：几千章的长篇里，「未读 / 已读完」这种词没有意义
+  els.seekPercent.textContent = pct < 1 ? `${pct.toFixed(1)}%` : `${Math.round(pct)}%`;
   els.statusPercent.textContent = `${Math.round(pct)}%`;
   els.statusChapter.textContent = titleOf(S.index);
 

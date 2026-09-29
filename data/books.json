@@ -31,9 +31,9 @@
       "format": "json",
       "compress": "gzip",
       "url": "data/books/fanren-xiuxian-zhuan.json.gz",
-      "words": 7311447,
+      "words": 7308145,
       "chapterCount": 2491,
-      "size": 9032521
+      "size": 9028497
     },
     {
       "id": "guanxian",
