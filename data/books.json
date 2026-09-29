@@ -1,0 +1,56 @@
+{
+  "name": "墨读 · 书库",
+  "updatedAt": "2026-09-29",
+  "books": [
+    {
+      "id": "mingchao-naxieshi",
+      "title": "明朝那些事儿",
+      "author": "当年明月",
+      "intro": "从 1344 年到 1644 年，三百年明史。以正史为骨、小说为笔，把皇帝、文臣、武将、太监写成一个个人，而不是一行行结论。",
+      "tags": [
+        "历史",
+        "明史",
+        "通俗史"
+      ],
+      "format": "json",
+      "compress": "gzip",
+      "url": "data/books/mingchao-naxieshi.json.gz",
+      "words": 1475402,
+      "chapterCount": 151,
+      "size": 1917725
+    },
+    {
+      "id": "fanren-xiuxian-zhuan",
+      "title": "凡人修仙传",
+      "author": "忘语",
+      "intro": "一个普通的山村穷小子，偶然下进入到当地江湖小门派，成了一名记名弟子。他依靠自身努力和算计，一步步走向修仙之路。",
+      "tags": [
+        "仙侠",
+        "修真"
+      ],
+      "format": "json",
+      "compress": "gzip",
+      "url": "data/books/fanren-xiuxian-zhuan.json.gz",
+      "words": 7311447,
+      "chapterCount": 2491,
+      "size": 9032521
+    },
+    {
+      "id": "guanxian",
+      "title": "官仙",
+      "author": "陈风笑",
+      "intro": "罗天上仙陈太忠渡劫失败，魂穿到一个三年级小学生身上。曾经高高在上的仙人，如今要重新读书、考试、做人，也要重新学会在这个世界上活着。",
+      "tags": [
+        "仙侠",
+        "官场",
+        "穿越"
+      ],
+      "format": "json",
+      "compress": "gzip",
+      "url": "data/books/guanxian.json.gz",
+      "words": 14017185,
+      "chapterCount": 4515,
+      "size": 17462247
+    }
+  ]
+}

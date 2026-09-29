@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbf7ef"/>
+      <stop offset="1" stop-color="#e5d7c0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="118" y="104" width="276" height="304" rx="18" fill="#b0442f"/>
+  <rect x="136" y="122" width="240" height="268" rx="10" fill="none" stroke="#fdf3ea" stroke-width="4" opacity=".45"/>
+  <text x="256" y="322" text-anchor="middle" font-family="Songti SC, STSong, SimSun, serif"
+        font-size="216" font-weight="700" fill="#fdf3ea">墨</text>
+</svg>

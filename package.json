@@ -1,0 +1,16 @@
+{
+  "name": "inkread",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "墨读 · InkRead —— 把小说存在浏览器里的移动端阅读器",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "serve": "node tools/serve.mjs",
+    "samples": "node tools/gen-samples.mjs",
+    "test": "node tools/self-test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

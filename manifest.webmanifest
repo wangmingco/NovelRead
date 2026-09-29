@@ -1,0 +1,20 @@
+{
+  "name": "墨读 · InkRead",
+  "short_name": "墨读",
+  "description": "把小说存在浏览器里的移动端阅读器",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1e9dc",
+  "theme_color": "#f1e9dc",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
