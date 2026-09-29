@@ -178,7 +178,6 @@ function cardHTML(item, index) {
     if (item.chapterCount) bits.push(`${item.chapterCount} 章`);
     if (item.size) bits.push(formatBytes(item.size));
     else if (item.words) bits.push(formatWords(item.words));
-    if (item.compress) bits.push(item.compress.toUpperCase());
     meta = `<span>${bits.join(' · ') || '待下载'}</span>`;
   }
 

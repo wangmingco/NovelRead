@@ -390,12 +390,15 @@ html[data-theme='ink']   { --hero-bg: linear-gradient(142deg, #17171a 0%, #0a0a0
   display: flex;
   align-items: center;
   gap: 5px;
+  min-width: 0;
   font-size: 11px;
   color: var(--text-3);
   white-space: nowrap;
   overflow: hidden;
   font-variant-numeric: tabular-nums;
 }
+.card-meta > span { overflow: hidden; text-overflow: ellipsis; }
+.card-meta .icon { flex: none; }
 .card-meta .icon { width: 12px; height: 12px; }
 .card-meta.is-reading { color: var(--accent); }
 .card-meta b { font-weight: 500; }

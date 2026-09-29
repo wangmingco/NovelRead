@@ -32,24 +32,22 @@
 ## 快速开始
 
 必须通过 HTTP 打开（`file://` 下浏览器不允许 fetch 本地文件）。
-仓库根目录里的 `start.bat` 会在 **9800** 端口起一个 Python 静态服务器，直接双击即可：
 
-```bat
-start.bat
-::   Local:   http://localhost:9800
-::   Network: http://192.168.x.x:9800
-```
+**Windows：双击根目录的 `start.bat`** —— 它会自动挑一个空闲端口（默认 5173）、
+优先用 `node tools/serve.mjs`（没有 Node 就退回 `python -m http.server`）、
+并把手机访问用的内网地址打印出来，最后自动打开浏览器。
 
-或者用自带的 Node 服务器：
+也可以手动起服务：
 
 ```bash
 npm start          # = node tools/serve.mjs，默认 5173 端口
+python -m http.server 5173 --bind 0.0.0.0     # 或者用 Python
 ```
 
 ### 在手机上调试
 
 1. 手机和电脑连同一个 Wi-Fi。
-2. 用上面 `Network:` 那一行的内网地址访问。
+2. 用 `start.bat` 打印出来的 `On phone:` 内网地址访问（形如 `http://192.168.x.x:5173/`）。
 3. 「添加到主屏幕」安装，就得到一个全屏、无地址栏的阅读 App。
 
 ## 书库
@@ -156,7 +154,7 @@ data/books/*.json.gz        压缩后的书
 tools/serve.mjs             带正确 UTF-8 charset 的静态服务器
 tools/build-books.mjs       编码转换 / 清洗 / 切章 / gzip / 生成清单
 tools/self-test.mjs         解析器与书库自检
-start.bat                   既有的 Python 静态服务器脚本（9800 端口）
+start.bat                   一键启动：挑端口 + 起服务 + 打印手机访问地址
 ```
 
 ## 实现要点
