@@ -1,0 +1,39 @@
+index.html
+  s_b7428c73821db0::t_d055c95b6a8917 102,108-109
+  s_b7428c73821db0::t_6226307dc8e5b5 45-46
+assets/css/reader.css
+  s_b7428c73821db0::t_709d86aed428e4 203-204,537-538
+  s_b7428c73821db0::t_93ce3e7cb4133a 205-222,224-225,228-229
+  s_b7428c73821db0::t_0af3e65f65d58e 14-15,58
+  s_b7428c73821db0::t_66d1014d182aa5 223,226
+  s_b7428c73821db0::t_da135918e2ad1b 227
+  s_b7428c73821db0::t_7a8785b00642f2 539
+README.md
+  s_b7428c73821db0::t_22c83eefe0ffff 173-176
+assets/js/reader.js
+  s_b7428c73821db0::t_36ab340ce4695c 360-393,584-585
+  s_b7428c73821db0::t_cdd49cce19c430 582-583,594-608
+  s_b7428c73821db0::t_bea79744776e64 586-587
+  s_b7428c73821db0::t_d3f7cdd91efda9 698-699,831-835
+  s_b7428c73821db0::t_7b3edf3d0ea8af 19-20
+  s_b7428c73821db0::t_c7879cacd82963 6
+  s_b7428c73821db0::t_264a7f6925d0af 417,419,421-422
+  s_b7428c73821db0::t_e974cd0314c67e 21,99-101
+  s_b7428c73821db0::t_ee77a1928bea55 22-24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.5.3",
+  "base_commit_sha": "ad2950bc683864f3c49195f039dbe4ab8026fe71",
+  "prompts": {},
+  "sessions": {
+    "s_b7428c73821db0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f1021fcd0ffeLwZuiAUMG2GmC7",
+        "model": "unknown"
+      },
+      "human_author": "wangming <wangming.co@hotmail.com>"
+    }
+  }
+}
