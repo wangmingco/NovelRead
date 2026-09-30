@@ -38,6 +38,14 @@ const S = {
   badgeTimer: 0,
   dragged: false,
   clockTimer: 0,
+  /* 横向翻页手势 */
+  snapTimer: 0,
+  touching: false,
+  vel: 0,
+  startPage: 0,
+  startScroll: 0,
+  lastX: 0,
+  samples: [],
 };
 
 /* ── 章节按需载入（大书不可能一次性放进内存） ───────────── */
@@ -83,6 +91,10 @@ export async function openReader(bookId) {
   S.page = 0;
   S.pages = 1;
   S.dragged = false;
+  clearTimeout(S.snapTimer);
+  S.touching = false;
+  S.vel = 0;
+  S.samples.length = 0;
 
   els.title.textContent = book.title;
   setMode(settings.mode === 'page' ? 'page' : 'scroll', { silent: true });
@@ -110,6 +122,7 @@ export async function closeReader() {
   clearTimeout(S.chromeTimer);
   clearTimeout(S.saveTimer);
   clearTimeout(S.badgeTimer);
+  clearTimeout(S.snapTimer);
   clearInterval(S.clockTimer);
   await saveProgress();
   S.book = null;
@@ -263,9 +276,60 @@ function turn(dir) {
   }
 }
 
-const snapToPage = debounce(() => {
-  if (S.mode !== 'page' || !S.pageW) return;
-  const n = clamp(Math.round(els.stage.scrollLeft / S.pageW), 0, S.pages - 1);
+/* ══ 翻页手势：手指抬稳、惯性停稳之后再吸附 ═════════════ */
+
+/** 停止滚动多久后开始吸附（给惯性滚动留出起步时间） */
+const SNAP_DELAY = 160;
+/** 甩动的速度门槛 px/ms（350px/s）。甩过这个速度就一定要翻过去 */
+const FLICK_V = 0.35;
+
+function pageAtScroll() {
+  return S.pageW ? clamp(Math.round(els.stage.scrollLeft / S.pageW), 0, S.pages - 1) : S.page;
+}
+
+/** 用最近约 100ms 的横向位移估算速度（px/ms，正数＝朝下一页甩） */
+function releaseVelocity() {
+  const s = S.samples;
+  if (s.length < 2) return 0;
+  const last = s[s.length - 1];
+  for (let i = s.length - 1; i >= 0; i--) {
+    const dt = last.t - s[i].t;
+    if (dt >= 100) return (last.x - s[i].x) / dt;
+  }
+  const dt = last.t - s[0].t;
+  return dt > 0 ? (last.x - s[0].x) / dt : 0;
+}
+
+function scheduleSnap(delay = SNAP_DELAY) {
+  clearTimeout(S.snapTimer);
+  S.snapTimer = setTimeout(snapNow, delay);
+}
+
+function snapNow() {
+  if (!S.book || S.mode !== 'page' || !S.pageW) return;
+  // 手指还按在屏上：绝不动它，等抬手再算（老版本在这里会跟手指抢）
+  if (S.touching) return scheduleSnap();
+
+  // 位置还在动（惯性没停、或正赶上了卡顿掉帧）→ 再等 80ms，绝不中途截停
+  const x = els.stage.scrollLeft;
+  if (Math.abs(x - S.lastX) > 0.5) {
+    S.lastX = x;
+    return scheduleSnap(80);
+  }
+
+  const base = els.stage.scrollLeft / S.pageW;
+  const byPos = clamp(Math.round(base), 0, S.pages - 1);
+  let n = byPos;
+
+  // 甩动：从起手那一页朝甩的方向至少翻一页 —— 惯性不够也不会「翻到一半弹回来」。
+  // 只在位移还没甩过去时补翻，惯性已经推过去就以位置为准，避免连翻两页。
+  const travelled = Math.abs(els.stage.scrollLeft - S.startScroll);
+  if (Math.abs(S.vel) >= FLICK_V && travelled >= S.pageW * 0.1) {
+    const dir = S.vel > 0 ? 1 : -1;
+    if (Math.sign(byPos - S.startPage) !== dir) n = clamp(S.startPage + dir, 0, S.pages - 1);
+  }
+  S.vel = 0;
+
   const left = n * S.pageW;
   if (Math.abs(els.stage.scrollLeft - left) > 2) {
     els.stage.scrollTo({ left, behavior: 'smooth' });
@@ -276,7 +340,7 @@ const snapToPage = debounce(() => {
     showBadge();
     vibrate(5);
   }
-}, 150);
+}
 
 /* ══ 进度 ═════════════════════════════════════════════════ */
 
@@ -668,15 +732,39 @@ export function initReader() {
     else openTOC();
   });
 
-  /* 点击 / 拖动 */
+  /* 点击 / 拖动：记录采样，抬手时算出甩动速度 */
   let px = 0;
   let py = 0;
+
+  const noteSample = () => {
+    const now = performance.now();
+    const x = els.stage.scrollLeft;
+    const s = S.samples;
+    const last = s[s.length - 1];
+    if (last && now - last.t < 16) {
+      last.t = now;
+      last.x = x;
+      return;
+    }
+    s.push({ t: now, x });
+    if (s.length > 16) s.shift();
+  };
+
   els.stage.addEventListener(
     'pointerdown',
     (e) => {
       px = e.clientX;
       py = e.clientY;
       S.dragged = false;
+      S.touching = true;
+      S.vel = 0;
+      S.startScroll = els.stage.scrollLeft;
+      S.startPage = pageAtScroll();
+      S.lastX = S.startScroll;
+      S.samples.length = 0;
+      noteSample();
+      // 手指按住期间绝不吸附，否则拖到一半会被拽回去
+      clearTimeout(S.snapTimer);
     },
     { passive: true }
   );
@@ -684,9 +772,24 @@ export function initReader() {
     'pointermove',
     (e) => {
       if (Math.abs(e.clientX - px) > 9 || Math.abs(e.clientY - py) > 9) S.dragged = true;
+      if (S.touching) noteSample();
     },
     { passive: true }
   );
+
+  // 抬手要挂在 window 上：手指滑出阅读区也要能收到
+  const endDrag = () => {
+    if (!S.touching) return;
+    S.touching = false;
+    noteSample();
+    S.vel = releaseVelocity();
+    S.lastX = els.stage.scrollLeft;
+    S.samples.length = 0;
+    // 留 170ms 让惯性滚起来，之后由 scroll 事件不断顺延，停稳才吸附
+    scheduleSnap(170);
+  };
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
 
   els.stage.addEventListener('click', (e) => {
     if (S.dragged || hasSelection()) return;
@@ -714,7 +817,8 @@ export function initReader() {
           updateUI();
           showBadge();
         }
-        snapToPage();
+        // 每次滚动都顺延吸附计时：只有停下来 160ms 才会去吸
+        scheduleSnap();
       }
       // 滚动模式的进度保存节流
       const now = Date.now();

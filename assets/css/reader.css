@@ -59,6 +59,8 @@ body.is-reading { overscroll-behavior: none; }
            calc(var(--safe-b) + 44px) calc(21px + var(--safe-l));
   user-select: none;
   -webkit-user-select: none;
+  /* 手指按住正文时不要弹 iOS 的放大镜 / 长按菜单，滑动翻页才干净 */
+  -webkit-touch-callout: none;
 }
 .reader[data-mode='page'] .reader-stage::-webkit-scrollbar { display: none; }
 
