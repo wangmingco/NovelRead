@@ -42,6 +42,8 @@
     <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/></symbol>
     <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l8.5 15h-17z"/><path d="M12 10v4M12 16.6v.4"/></symbol>
     <symbol id="i-spinner" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9" /></symbol>
+    <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-full-exit" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></symbol>
   </defs>
 </svg>
 
@@ -97,12 +99,14 @@
       <div class="reader-hint" id="reader-hint" hidden></div>
 
       <header class="chrome chrome--top" id="chrome-top">
+        <button class="icon-btn icon-btn--ghost chrome-menu" id="btn-menu" aria-label="打开目录与设置"><svg class="icon"><use href="#i-sliders"/></svg></button>
         <button class="icon-btn icon-btn--ghost" id="btn-back" aria-label="返回书架"><svg class="icon"><use href="#i-back"/></svg></button>
         <button class="chrome-title" id="btn-book-info">
           <b id="reader-title">书名</b>
           <i id="reader-sub">章节</i>
         </button>
-        <button class="icon-btn icon-btn--ghost" id="btn-quick-bookmark" aria-label="添加书签"><svg class="icon"><use href="#i-bookmark"/></svg></button>
+        <button class="icon-btn icon-btn--ghost chrome-quick" id="btn-quick-bookmark" aria-label="添加书签"><svg class="icon"><use href="#i-bookmark"/></svg></button>
+        <button class="icon-btn icon-btn--ghost chrome-fs" id="btn-fullscreen" aria-label="全屏"><svg class="icon"><use href="#i-full"/></svg></button>
       </header>
 
       <div class="chrome chrome--bottom" id="chrome-bottom">

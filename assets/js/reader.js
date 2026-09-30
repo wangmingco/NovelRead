@@ -3,7 +3,7 @@
    ═══════════════════════════════════════════════════════════ */
 
 import {
-  $, escapeHtml, clamp, debounce, nextFrame, hasSelection, isTouchDevice, vibrate, clockText, relTime,
+  $, escapeHtml, clamp, debounce, nextFrame, hasSelection, vibrate, clockText, relTime,
 } from './util.js';
 import { idbGet, idbPut, idbAllBy, idbDelete, idbRemoveBook, getChunk } from './db.js';
 import { toast, openSheet, closeSheet, confirmDialog, bookPercent } from './ui.js';
@@ -15,6 +15,12 @@ const PGAP = 44;
 const SAVE_DELAY = 600;
 /** 内存里最多缓存几个分片（每片 40 章） */
 const SHARD_CACHE = 4;
+
+/** 是否走手机端布局（与 CSS 的 max-width:719px / pointer:coarse 断点保持一致） */
+const isMobileLayout = () => window.matchMedia('(max-width: 719px), (pointer: coarse)').matches;
+
+/** 首次提示的存储键（改过提示文案就换一个键，老用户也能看到） */
+const HINT_KEY = 'inkread.hint.seen.v2';
 
 const els = {};
 const S = {
@@ -90,7 +96,9 @@ export async function openReader(bookId) {
   renderTOC('');
 
   await renderChapter({ ratio: prog ? ratio : 0 });
-  setChrome(true, true);
+  // 手机端一开始就把底部菜单收起来：左上角的设置按钮负责唤出目录等
+  if (isMobileLayout()) setChrome(false, false);
+  else setChrome(true, true);
   updateClock();
   clearInterval(S.clockTimer);
   S.clockTimer = setInterval(updateClock, 20_000);
@@ -349,6 +357,40 @@ function setChrome(visible, autoHide = false) {
   }
 }
 
+/* ══ 全屏（手机端右上角） ════════════════════════════════ */
+
+function fullscreenEl() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+async function toggleFullscreen() {
+  try {
+    if (fullscreenEl()) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) await exit.call(document);
+      return;
+    }
+    const el = document.documentElement;
+    const enter = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!enter) {
+      toast('当前浏览器不支持全屏', { icon: 'i-warn' });
+      return;
+    }
+    await enter.call(el);
+    vibrate(6);
+  } catch {
+    toast('全屏不可用', { icon: 'i-warn' });
+  }
+}
+
+function syncFullscreenBtn() {
+  if (!els.fs) return;
+  const on = !!fullscreenEl();
+  els.fs.classList.toggle('is-on', on);
+  els.fs.setAttribute('aria-label', on ? '退出全屏' : '全屏');
+  els.fs.querySelector('use')?.setAttribute('href', on ? '#i-full-exit' : '#i-full');
+}
+
 /** 清掉分页时写在行内样式上的多栏布局，避免切回滚动模式后正文仍是分栏 */
 function resetStreamLayout() {
   const s = els.stream.style;
@@ -372,12 +414,12 @@ function setMode(mode, { silent = false } = {}) {
 
 let hintShown = false;
 function maybeShowHint() {
-  if (hintShown || localStorage.getItem('inkread.hint.seen')) return;
+  if (hintShown || localStorage.getItem(HINT_KEY)) return;
   hintShown = true;
-  localStorage.setItem('inkread.hint.seen', '1');
+  localStorage.setItem(HINT_KEY, '1');
   els.hint.hidden = false;
-  els.hint.innerHTML = isTouchDevice()
-    ? '轻触屏幕中间可收起菜单<br>左右滑动翻页 · 两侧轻点翻页'
+  els.hint.innerHTML = isMobileLayout()
+    ? '点左上角的设置按钮打开目录与阅读设置<br>右上角全屏 · 左右轻点翻页'
     : '点击屏幕中部收起菜单<br>← → 翻页 · 滚轮滚动';
   setTimeout(() => {
     els.hint.classList.add('is-out');
@@ -537,14 +579,33 @@ export function initReader() {
   els.marksList = $('#marks-list');
   els.marksSub = $('#marks-sub');
   els.view = $('#view-reader');
+  els.menu = $('#btn-menu');
+  els.fs = $('#btn-fullscreen');
+
+  /* 左上角菜单 / 右上角全屏 */
+  document.addEventListener('fullscreenchange', syncFullscreenBtn);
+  document.addEventListener('webkitfullscreenchange', syncFullscreenBtn);
 
   /* 返回 */
   $('#btn-back').addEventListener('click', () => {
     location.hash = '#/';
   });
 
-  /* 中间标题 → 目录 */
-  $('#btn-book-info').addEventListener('click', openTOC);
+  /* 左上角设置按钮：手机端唯一呼出目录 / 书签 / 设置的入口 */
+  els.menu.addEventListener('click', () => {
+    const menuOpen = !els.reader.classList.contains('is-immersive');
+    setChrome(!menuOpen, false);
+    vibrate(6);
+  });
+
+  /* 右上角全屏 */
+  els.fs.addEventListener('click', toggleFullscreen);
+
+  /* 中间标题 → 目录（手机端只留左上角那个入口） */
+  $('#btn-book-info').addEventListener('click', () => {
+    if (isMobileLayout()) return;
+    openTOC();
+  });
   $('#btn-quick-bookmark').addEventListener('click', addBookmark);
 
   /* 进度条 */
@@ -634,6 +695,8 @@ export function initReader() {
     const x = (e.clientX - r.left) / r.width;
     if (S.mode === 'page' && x < 0.3) return turn(-1);
     if (S.mode === 'page' && x > 0.7) return turn(1);
+    // 手机端不再用「点中间」呼出菜单，改由左上角的设置按钮负责
+    if (isMobileLayout()) return;
     setChrome(els.reader.classList.contains('is-immersive'));
   });
 
@@ -765,7 +828,11 @@ export function initReader() {
 
   /* 打开抽屉时让工具栏保持可见 */
   document.addEventListener('click', (e) => {
-    if (e.target.closest('.tool, #btn-quick-bookmark, #btn-book-info')) setChrome(true, false);
+    const hit = e.target.closest('.tool, #btn-quick-bookmark, #btn-book-info');
+    if (!hit) return;
+    // 手机端标题不参与，免得点标题把菜单顶上来
+    if (hit.id === 'btn-book-info' && isMobileLayout()) return;
+    setChrome(true, false);
   });
 }
 
