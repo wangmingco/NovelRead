@@ -12,7 +12,7 @@ body.is-reading { overscroll-behavior: none; }
   overflow: hidden;
   background: transparent;
   /* 顶栏占高（含刘海安全区），正文按它预留空间，两者永远严丝合缝 */
-  --chrome-h: calc(var(--safe-t) + 56px);
+  --chrome-h: calc(var(--safe-t) + 49px);
 }
 
 /* ── 内容台 ─────────────────────────────────────────────── */
@@ -43,7 +43,7 @@ body.is-reading { overscroll-behavior: none; }
   overscroll-behavior-y: contain;
 }
 .reader[data-mode='scroll'] .reader-stream {
-  padding: calc(var(--safe-t) + 20px) calc(21px + var(--safe-r))
+  padding: calc(var(--chrome-h) + 10px) calc(21px + var(--safe-r))
            calc(var(--safe-b) + 48px) calc(21px + var(--safe-l));
 }
 
@@ -153,8 +153,9 @@ body.is-reading { overscroll-behavior: none; }
   top: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: calc(var(--safe-t) + 5px) calc(8px + var(--safe-r)) 5px calc(4px + var(--safe-l));
+  gap: 2px;
+  /* 顶栏常驻：4 + 40 + 4 + 1px 描边 = 49px（+ 安全区），刚好等于 --chrome-h */
+  padding: calc(var(--safe-t) + 4px) calc(6px + var(--safe-r)) 4px calc(6px + var(--safe-l));
   border-bottom: 1px solid var(--line);
 }
 .chrome--bottom {
@@ -166,7 +167,8 @@ body.is-reading { overscroll-behavior: none; }
   gap: 12px;
 }
 
-.icon-btn--ghost .icon { width: 21px; height: 21px; }
+#chrome-top .icon-btn { width: 40px; height: 40px; }
+.icon-btn--ghost .icon { width: 20px; height: 20px; }
 
 .chrome-title {
   flex: 1;
@@ -197,36 +199,20 @@ body.is-reading { overscroll-behavior: none; }
   white-space: nowrap;
 }
 
-/* 沉浸模式：隐藏工具栏 */
-.reader.is-immersive .chrome { pointer-events: none; }
-.reader.is-immersive .chrome--top { transform: translateY(-100%); opacity: 0; }
-.reader.is-immersive .chrome--bottom { transform: translateY(100%); opacity: 0; }
+/* 沉浸模式：只收起底栏。顶栏常驻 —— 菜单 / 全屏按钮就住在上面，
+   而它占的空间由它自己填满，所以收起底栏也不会在顶部留出空白 */
+.reader.is-immersive .chrome--bottom {
+  pointer-events: none;
+  transform: translateY(100%);
+  opacity: 0;
+}
 
-/* ── 手机 / 触屏：顶栏常驻，正文紧贴栏底，去掉顶部大片留白 ── */
+/* 首次提示：底栏收着时贴着状态行，底栏打开时再抬高 */
+.reader.is-immersive .reader-hint { bottom: calc(var(--safe-b) + 56px); }
+
+/* 手机 / 触屏：书签按钮收进底部工具，顶栏把位置让给菜单和全屏 */
 @media (max-width: 719px), (pointer: coarse) {
-  /* 顶栏瘦身：4 + 40 + 4 + 1px 描边 = 49px（+ 安全区） */
-  .reader { --chrome-h: calc(var(--safe-t) + 49px); }
-
-  .chrome--top {
-    gap: 2px;
-    padding: calc(var(--safe-t) + 4px) calc(6px + var(--safe-r)) 4px calc(6px + var(--safe-l));
-  }
-  #chrome-top .icon-btn { width: 40px; height: 40px; }
-  .icon-btn--ghost .icon { width: 20px; height: 20px; }
-
-  /* 菜单收起时顶栏照常留在原地（它占的空间由它自己填满） */
-  .reader.is-immersive .chrome--top { transform: none; opacity: 1; pointer-events: auto; }
-
-  /* 书签收进底部工具；菜单 / 全屏是手机端专属按钮 */
   .chrome-quick { display: none; }
-
-  /* 正文从顶栏下沿开始，继续滚动时再钻到栏底下去 */
-  .reader[data-mode='scroll'] .reader-stream {
-    padding: calc(var(--chrome-h) + 10px) calc(21px + var(--safe-r))
-             calc(var(--safe-b) + 44px) calc(21px + var(--safe-l));
-  }
-  /* 菜单收着的时候，首次提示贴着状态行即可 */
-  .reader .reader-hint { bottom: calc(var(--safe-b) + 56px); }
 }
 
 /* ── 进度控制 ───────────────────────────────────────────── */
@@ -534,9 +520,13 @@ input[type='range']::-moz-range-thumb {
 /* ── 宽屏 ───────────────────────────────────────────────── */
 @media (min-width: 720px) {
   .reader[data-mode='scroll'] .reader-stream { max-width: 680px; margin: 0 auto; }
-  .chrome--top, .chrome--bottom, .reader-status { padding-left: max(24px, env(safe-area-inset-left)); }
+  .chrome--top {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .chrome--bottom, .reader-status { padding-left: max(24px, env(safe-area-inset-left)); }
 }
-/* 只有「宽屏 + 鼠标」才收起手机端那两个角上的按钮 */
+/* 宽屏 + 鼠标：不需要手机端的全屏按钮 */
 @media (min-width: 720px) and (pointer: fine) {
-  .chrome-menu, .chrome-fs { display: none; }
+  .chrome-fs { display: none; }
 }

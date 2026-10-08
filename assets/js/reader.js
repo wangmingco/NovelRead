@@ -20,7 +20,7 @@ const SHARD_CACHE = 4;
 const isMobileLayout = () => window.matchMedia('(max-width: 719px), (pointer: coarse)').matches;
 
 /** 首次提示的存储键（改过提示文案就换一个键，老用户也能看到） */
-const HINT_KEY = 'inkread.hint.seen.v2';
+const HINT_KEY = 'inkread.hint.seen.v3';
 
 const els = {};
 const S = {
@@ -108,9 +108,8 @@ export async function openReader(bookId) {
   renderTOC('');
 
   await renderChapter({ ratio: prog ? ratio : 0 });
-  // 手机端一开始就把底部菜单收起来：左上角的设置按钮负责唤出目录等
-  if (isMobileLayout()) setChrome(false, false);
-  else setChrome(true, true);
+  // 进入阅读即收起工具栏：右上角常驻按钮负责唤出目录 / 书签 / 设置
+  setChrome(false, false);
   updateClock();
   clearInterval(S.clockTimer);
   S.clockTimer = setInterval(updateClock, 20_000);
@@ -280,7 +279,9 @@ function turn(dir) {
 
 /** 停止滚动多久后开始吸附（给惯性滚动留出起步时间） */
 const SNAP_DELAY = 160;
-/** 甩动的速度门槛 px/ms（350px/s）。甩过这个速度就一定要翻过去 */
+/** 只要横向滑动超过页宽的这个比例，就认作一次翻页，不再要求过半 */
+const SWIPE_MIN = 0.12;
+/** 甩动速度门槛 px/ms（350px/s）：距离差一点点，但甩得够快也算翻页 */
 const FLICK_V = 0.35;
 
 function pageAtScroll() {
@@ -321,11 +322,17 @@ function snapNow() {
   const byPos = clamp(Math.round(base), 0, S.pages - 1);
   let n = byPos;
 
-  // 甩动：从起手那一页朝甩的方向至少翻一页 —— 惯性不够也不会「翻到一半弹回来」。
-  // 只在位移还没甩过去时补翻，惯性已经推过去就以位置为准，避免连翻两页。
-  const travelled = Math.abs(els.stage.scrollLeft - S.startScroll);
-  if (Math.abs(S.vel) >= FLICK_V && travelled >= S.pageW * 0.1) {
-    const dir = S.vel > 0 ? 1 : -1;
+  // 这是一次「滑动」吗？滑动就干脆翻过去，不比谁力气大。
+  // 距离够（≥ 12% 页宽）或甩得够快（≥ 350px/s）都算；
+  // 判定用的是「起手那一页」，所以不会连翻两页，也不会半路弹回去。
+  const delta = els.stage.scrollLeft - S.startScroll;
+  const travelled = Math.abs(delta);
+  const swiped =
+    travelled >= S.pageW * SWIPE_MIN ||
+    // 甩得快也算，但要真挪了地方，免得打字似的抖一下就翻页
+    (Math.abs(S.vel) >= FLICK_V && travelled >= S.pageW * 0.05);
+  if (swiped) {
+    const dir = delta !== 0 ? Math.sign(delta) : S.vel > 0 ? 1 : -1;
     if (Math.sign(byPos - S.startPage) !== dir) n = clamp(S.startPage + dir, 0, S.pages - 1);
   }
   S.vel = 0;
@@ -415,6 +422,10 @@ function showBadge() {
 
 function setChrome(visible, autoHide = false) {
   els.reader.classList.toggle('is-immersive', !visible);
+  if (els.menu) {
+    els.menu.classList.toggle('is-on', visible);
+    els.menu.setAttribute('aria-expanded', String(visible));
+  }
   clearTimeout(S.chromeTimer);
   if (visible && autoHide) {
     S.chromeTimer = setTimeout(() => setChrome(false, false), 3600);
@@ -483,8 +494,8 @@ function maybeShowHint() {
   localStorage.setItem(HINT_KEY, '1');
   els.hint.hidden = false;
   els.hint.innerHTML = isMobileLayout()
-    ? '点左上角的设置按钮打开目录与阅读设置<br>右上角全屏 · 左右轻点翻页'
-    : '点击屏幕中部收起菜单<br>← → 翻页 · 滚轮滚动';
+    ? '点右上角按钮打开目录、书签与设置<br>左右轻点翻页 · 左右滑动翻页'
+    : '点右上角按钮打开目录、书签与设置<br>点两侧或 ← → 翻页 · 滚轮滚动';
   setTimeout(() => {
     els.hint.classList.add('is-out');
     setTimeout(() => {
@@ -655,7 +666,7 @@ export function initReader() {
     location.hash = '#/';
   });
 
-  /* 左上角设置按钮：手机端唯一呼出目录 / 书签 / 设置的入口 */
+  /* 右上角常驻按钮：呼出 / 收起目录、书签、设置 */
   els.menu.addEventListener('click', () => {
     const menuOpen = !els.reader.classList.contains('is-immersive');
     setChrome(!menuOpen, false);
@@ -796,11 +807,9 @@ export function initReader() {
     if (e.target.closest('button, a')) return;
     const r = els.stage.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width;
-    if (S.mode === 'page' && x < 0.3) return turn(-1);
-    if (S.mode === 'page' && x > 0.7) return turn(1);
-    // 手机端不再用「点中间」呼出菜单，改由左上角的设置按钮负责
-    if (isMobileLayout()) return;
-    setChrome(els.reader.classList.contains('is-immersive'));
+    // 左侧点上一页，右侧点下一页；中间不再呼出工具栏（改由右上角按钮负责）
+    if (x < 0.3) return turn(-1);
+    if (x > 0.7) return turn(1);
   });
 
   /* 滚动 */
