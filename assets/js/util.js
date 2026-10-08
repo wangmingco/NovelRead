@@ -84,6 +84,16 @@ export function isTouchDevice() {
   );
 }
 
+/** 手机端布局（与 CSS 的 max-width:719px / pointer:coarse 断点保持一致） */
+export function isMobileLayout() {
+  return typeof matchMedia === 'function' && matchMedia('(max-width: 719px), (pointer: coarse)').matches;
+}
+
+/** 宽屏 + 鼠标：PC 阅读模式生效的环境（与 CSS 的 min-width:720px / pointer:fine 对齐） */
+export function isDesktopLayout() {
+  return typeof matchMedia === 'function' && matchMedia('(min-width: 720px) and (pointer: fine)').matches;
+}
+
 /** 元素是否处于「正在滚动/拖拽」状态 */
 export function hasSelection() {
   const s = window.getSelection?.();

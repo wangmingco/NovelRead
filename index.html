@@ -107,7 +107,7 @@
         <button class="icon-btn icon-btn--ghost chrome-quick" id="btn-quick-bookmark" aria-label="添加书签"><svg class="icon"><use href="#i-bookmark"/></svg></button>
         <button class="icon-btn icon-btn--ghost chrome-fs" id="btn-fullscreen" aria-label="全屏"><svg class="icon"><use href="#i-full"/></svg></button>
         <!-- 右上角常驻按钮：点击呼出 / 收起目录、书签、设置 -->
-        <button class="icon-btn icon-btn--ghost chrome-menu" id="btn-menu" aria-label="打开目录与设置" aria-expanded="false"><svg class="icon"><use href="#i-sliders"/></svg></button>
+        <button class="icon-btn icon-btn--ghost chrome-menu" id="btn-menu" aria-label="打开目录与设置" aria-haspopup="menu" aria-expanded="false"><svg class="icon"><use href="#i-sliders"/></svg></button>
       </header>
 
       <div class="chrome chrome--bottom" id="chrome-bottom">
@@ -132,6 +132,28 @@
       </div>
 
       <div class="page-badge" id="page-badge" hidden></div>
+
+      <!-- PC 阅读模式的下拉菜单：点右上角按钮展开 -->
+      <div class="menu-pop" id="reader-menu" hidden role="menu" aria-label="阅读菜单">
+        <div class="menu-progress">
+          <input type="range" id="menu-range" min="0" max="0" step="1" value="0" aria-label="阅读进度" />
+          <div class="menu-progress-meta"><span id="menu-chapter">第 1 章</span><span id="menu-percent">0%</span></div>
+        </div>
+        <div class="menu-sep"></div>
+        <button class="menu-item" type="button" data-menu="toc" role="menuitem">
+          <svg class="icon"><use href="#i-list"/></svg><span>目录</span><i class="menu-hint" id="menu-toc-hint"></i>
+        </button>
+        <button class="menu-item" type="button" data-menu="bookmarks" role="menuitem">
+          <svg class="icon"><use href="#i-bookmark"/></svg><span>书签</span><i class="menu-hint" id="menu-mark-hint"></i>
+        </button>
+        <button class="menu-item" type="button" data-menu="settings" role="menuitem">
+          <svg class="icon"><use href="#i-sliders"/></svg><span>阅读设置</span>
+        </button>
+        <div class="menu-sep"></div>
+        <button class="menu-item" type="button" data-menu="shelf" role="menuitem">
+          <svg class="icon"><use href="#i-back"/></svg><span>返回书架</span>
+        </button>
+      </div>
     </div>
   </section>
 </div>

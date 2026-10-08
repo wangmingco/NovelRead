@@ -43,6 +43,8 @@ function defaults() {
     mode: isTouchDevice() ? 'page' : 'scroll',
     indent: true,
     justify: true,
+    /* 宽屏默认进阅读模式：顶栏只留右上角一个按钮 */
+    readingMode: true,
   };
 }
 
@@ -76,6 +78,7 @@ export function fontFamily() {
 export function applySettings() {
   const root = document.documentElement;
   root.dataset.theme = settings.theme;
+  root.classList.toggle('reading-mode', !!settings.readingMode);
   root.style.setProperty('--read-size', `${clamp(settings.fontSize, FONT_SIZE.min, FONT_SIZE.max)}px`);
   root.style.setProperty('--read-leading', String(leadingValue()));
   root.style.setProperty('--read-family', fontFamily());

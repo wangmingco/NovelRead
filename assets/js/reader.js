@@ -3,7 +3,8 @@
    ═══════════════════════════════════════════════════════════ */
 
 import {
-  $, escapeHtml, clamp, debounce, nextFrame, hasSelection, vibrate, clockText, relTime,
+  $, escapeHtml, clamp, debounce, nextFrame, hasSelection, isMobileLayout, isDesktopLayout,
+  vibrate, clockText, relTime,
 } from './util.js';
 import { idbGet, idbPut, idbAllBy, idbDelete, idbRemoveBook, getChunk } from './db.js';
 import { toast, openSheet, closeSheet, confirmDialog, bookPercent } from './ui.js';
@@ -16,11 +17,8 @@ const SAVE_DELAY = 600;
 /** 内存里最多缓存几个分片（每片 40 章） */
 const SHARD_CACHE = 4;
 
-/** 是否走手机端布局（与 CSS 的 max-width:719px / pointer:coarse 断点保持一致） */
-const isMobileLayout = () => window.matchMedia('(max-width: 719px), (pointer: coarse)').matches;
-
 /** 首次提示的存储键（改过提示文案就换一个键，老用户也能看到） */
-const HINT_KEY = 'inkread.hint.seen.v3';
+const HINT_KEY = 'inkread.hint.seen.v4';
 
 const els = {};
 const S = {
@@ -46,6 +44,8 @@ const S = {
   startScroll: 0,
   lastX: 0,
   samples: [],
+  /* PC 阅读菜单 */
+  menuTimer: 0,
 };
 
 /* ── 章节按需载入（大书不可能一次性放进内存） ───────────── */
@@ -92,9 +92,14 @@ export async function openReader(bookId) {
   S.pages = 1;
   S.dragged = false;
   clearTimeout(S.snapTimer);
+  clearTimeout(S.menuTimer);
   S.touching = false;
   S.vel = 0;
   S.samples.length = 0;
+  if (els.menuPop) {
+    els.menuPop.hidden = true;
+    els.menuPop.classList.remove('is-out');
+  }
 
   els.title.textContent = book.title;
   setMode(settings.mode === 'page' ? 'page' : 'scroll', { silent: true });
@@ -122,6 +127,7 @@ export async function closeReader() {
   clearTimeout(S.saveTimer);
   clearTimeout(S.badgeTimer);
   clearTimeout(S.snapTimer);
+  clearTimeout(S.menuTimer);
   clearInterval(S.clockTimer);
   await saveProgress();
   S.book = null;
@@ -406,6 +412,9 @@ function updateUI() {
   els.next.disabled = S.index === total - 1;
 
   els.badge.textContent = `${S.page + 1} / ${S.pages}`;
+
+  // 下拉菜单开着时，进度条也跟着走
+  if (readerMenuOpen()) renderMenuMeta();
 }
 
 function updateClock() {
@@ -422,14 +431,69 @@ function showBadge() {
 
 function setChrome(visible, autoHide = false) {
   els.reader.classList.toggle('is-immersive', !visible);
-  if (els.menu) {
-    els.menu.classList.toggle('is-on', visible);
-    els.menu.setAttribute('aria-expanded', String(visible));
-  }
+  syncMenuBtn();
   clearTimeout(S.chromeTimer);
   if (visible && autoHide) {
     S.chromeTimer = setTimeout(() => setChrome(false, false), 3600);
   }
+}
+
+/* ══ 阅读菜单（PC 阅读模式下右上角按钮拉出的下拉） ═══════ */
+
+/** 宽屏 + 鼠标 + 阅读模式：顶栏只剩右上角一个按钮，点开是下拉菜单 */
+function pcReadingMode() {
+  return isDesktopLayout() && !!settings.readingMode;
+}
+
+function readerMenuOpen() {
+  return !!els.menuPop && !els.menuPop.hidden && !els.menuPop.classList.contains('is-out');
+}
+
+/** 右上角按钮：底栏或下拉菜单任意一个开着就点亮 */
+function syncMenuBtn() {
+  if (!els.menu) return;
+  const on = readerMenuOpen() || !els.reader.classList.contains('is-immersive');
+  els.menu.classList.toggle('is-on', on);
+  els.menu.setAttribute('aria-expanded', String(on));
+}
+
+/** 菜单里的进度条与角标跟正文同步 */
+function renderMenuMeta() {
+  if (!S.book || !els.menuRange) return;
+  const total = chapterCount();
+  els.menuRange.max = String(Math.max(0, total - 1));
+  els.menuRange.value = String(S.index);
+  els.menuRange.style.setProperty('--p', `${total > 1 ? (S.index / (total - 1)) * 100 : 100}%`);
+  els.menuChapter.textContent = `第 ${S.index + 1} / ${total} 章`;
+  els.menuPercent.textContent = els.seekPercent.textContent;
+  els.menuTocHint.textContent = `${total} 章`;
+  els.menuMarkHint.textContent = S.marks.length ? `${S.marks.length} 条` : '';
+}
+
+function openReaderMenu() {
+  if (!els.menuPop || readerMenuOpen()) return;
+  renderMenuMeta();
+  clearTimeout(S.menuTimer);
+  els.menuPop.hidden = false;
+  els.menuPop.classList.remove('is-out');
+  syncMenuBtn();
+}
+
+function closeReaderMenu() {
+  if (!readerMenuOpen()) return;
+  els.menuPop.classList.add('is-out');
+  clearTimeout(S.menuTimer);
+  S.menuTimer = setTimeout(() => {
+    els.menuPop.hidden = true;
+    els.menuPop.classList.remove('is-out');
+    syncMenuBtn();
+  }, 160);
+}
+
+/** 抽屉要盖在正文上，底栏得先让位（阅读模式下压根没有底栏） */
+function revealChromeForSheet() {
+  if (pcReadingMode()) return;
+  setChrome(true, false);
 }
 
 /* ══ 全屏（手机端右上角） ════════════════════════════════ */
@@ -495,7 +559,7 @@ function maybeShowHint() {
   els.hint.hidden = false;
   els.hint.innerHTML = isMobileLayout()
     ? '点右上角按钮打开目录、书签与设置<br>左右轻点翻页 · 左右滑动翻页'
-    : '点右上角按钮打开目录、书签与设置<br>点两侧或 ← → 翻页 · 滚轮滚动';
+    : '点右上角按钮打开目录、书签与设置<br>点两侧翻页 · 右键直接翻下一页';
   setTimeout(() => {
     els.hint.classList.add('is-out');
     setTimeout(() => {
@@ -656,6 +720,12 @@ export function initReader() {
   els.view = $('#view-reader');
   els.menu = $('#btn-menu');
   els.fs = $('#btn-fullscreen');
+  els.menuPop = $('#reader-menu');
+  els.menuRange = $('#menu-range');
+  els.menuChapter = $('#menu-chapter');
+  els.menuPercent = $('#menu-percent');
+  els.menuTocHint = $('#menu-toc-hint');
+  els.menuMarkHint = $('#menu-mark-hint');
 
   /* 左上角菜单 / 右上角全屏 */
   document.addEventListener('fullscreenchange', syncFullscreenBtn);
@@ -666,11 +736,39 @@ export function initReader() {
     location.hash = '#/';
   });
 
-  /* 右上角常驻按钮：呼出 / 收起目录、书签、设置 */
+  /* 右上角常驻按钮：阅读模式下拉菜单，否则呼出 / 收起底栏 */
   els.menu.addEventListener('click', () => {
+    vibrate(6);
+    if (pcReadingMode()) {
+      if (readerMenuOpen()) closeReaderMenu();
+      else openReaderMenu();
+      return;
+    }
     const menuOpen = !els.reader.classList.contains('is-immersive');
     setChrome(!menuOpen, false);
-    vibrate(6);
+  });
+
+  /* 下拉菜单里的操作 */
+  els.menuPop.addEventListener('click', (e) => {
+    const item = e.target.closest('[data-menu]');
+    if (!item) return;
+    const act = item.dataset.menu;
+    closeReaderMenu();
+    if (act === 'toc') openTOC();
+    else if (act === 'bookmarks') openMarks();
+    else if (act === 'settings') openSettings();
+    else if (act === 'shelf') location.hash = '#/';
+  });
+  els.menuRange.addEventListener('change', () => gotoChapter(Number(els.menuRange.value)));
+
+  /* 点别处 / 按 Esc 收起菜单 */
+  document.addEventListener('click', (e) => {
+    if (!readerMenuOpen()) return;
+    if (e.target.closest('#reader-menu, #btn-menu')) return;
+    closeReaderMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeReaderMenu();
   });
 
   /* 右上角全屏 */
@@ -804,12 +902,21 @@ export function initReader() {
 
   els.stage.addEventListener('click', (e) => {
     if (S.dragged || hasSelection()) return;
+    // 菜单开着时，点正文只收菜单，不顺手翻页
+    if (readerMenuOpen()) return;
     if (e.target.closest('button, a')) return;
     const r = els.stage.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width;
     // 左侧点上一页，右侧点下一页；中间不再呼出工具栏（改由右上角按钮负责）
     if (x < 0.3) return turn(-1);
     if (x > 0.7) return turn(1);
+  });
+
+  /* PC：右键直接翻到下一页（选着文字时要让浏览器弹自己的菜单） */
+  els.stage.addEventListener('contextmenu', (e) => {
+    if (isMobileLayout() || hasSelection()) return;
+    e.preventDefault();
+    turn(1);
   });
 
   /* 滚动 */
@@ -849,6 +956,7 @@ export function initReader() {
   }, 220);
   window.addEventListener('resize', reflow);
   window.addEventListener('orientationchange', reflow);
+  window.addEventListener('resize', () => closeReaderMenu());
 
   /* 键盘 */
   document.addEventListener('keydown', (e) => {
@@ -886,6 +994,11 @@ export function initReader() {
 
   /* 设置变化 */
   onSettings((patch) => {
+    if (patch && 'readingMode' in patch) {
+      closeReaderMenu();
+      if (pcReadingMode()) setChrome(false, false);
+      syncMenuBtn();
+    }
     if (!S.book) return;
     const layoutKeys = ['fontSize', 'leading', 'font', 'mode', 'indent', 'justify'];
     if (patch && !Object.keys(patch).some((k) => layoutKeys.includes(k))) return;
@@ -945,7 +1058,7 @@ export function initReader() {
     if (!hit) return;
     // 手机端标题不参与，免得点标题把菜单顶上来
     if (hit.id === 'btn-book-info' && isMobileLayout()) return;
-    setChrome(true, false);
+    revealChromeForSheet();
   });
 }
 
@@ -953,18 +1066,18 @@ function openTOC() {
   els.tocFilter.value = '';
   renderTOC('');
   openSheet('sheet-toc');
-  setChrome(true, false);
+  revealChromeForSheet();
   setTimeout(scrollTOCtoCurrent, 380);
 }
 
 function openMarks() {
   renderMarks();
   openSheet('sheet-marks');
-  setChrome(true, false);
+  revealChromeForSheet();
 }
 
 function openSettings() {
   renderSettingsPanel({ showBook: true, bookTitle: S.book?.title || '' });
   openSheet('sheet-settings');
-  setChrome(true, false);
+  revealChromeForSheet();
 }

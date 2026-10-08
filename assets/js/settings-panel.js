@@ -2,7 +2,7 @@
    settings-panel.js  阅读设置面板（书架与阅读器共用）
    ═══════════════════════════════════════════════════════════ */
 
-import { $, clamp } from './util.js';
+import { $, clamp, isDesktopLayout } from './util.js';
 import { settings, setSettings, THEMES, FONTS, LEADINGS, FONT_SIZE } from './store.js';
 
 const ctx = { onDeleteBook: null, onClearMarks: null };
@@ -66,6 +66,15 @@ export function renderSettingsPanel({ showBook = false, bookTitle = '' } = {}) {
       <div class="switch-row"><span>段首缩进</span><button class="switch" type="button" data-toggle="indent" role="switch"><i></i></button></div>
       <div class="switch-row"><span>两端对齐</span><button class="switch" type="button" data-toggle="justify" role="switch"><i></i></button></div>
     </div>
+
+    ${
+      isDesktopLayout()
+        ? `<div class="set-group">
+      <div class="switch-row"><span>阅读模式</span><button class="switch" type="button" data-toggle="readingMode" role="switch"><i></i></button></div>
+      <p class="set-note" style="padding-top:0">阅读模式隐藏书名和章节，只在右上角留一个按钮，点开就是操作菜单。右键点击正文直接翻到下一页。</p>
+    </div>`
+        : ''
+    }
 
     ${
       showBook
