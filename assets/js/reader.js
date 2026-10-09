@@ -37,13 +37,15 @@ const S = {
   dragged: false,
   clockTimer: 0,
   /* 横向翻页手势 */
-  snapTimer: 0,
+  settleTimer: 0,
   touching: false,
-  vel: 0,
+  dragging: false,
+  animating: false,
   startPage: 0,
   startScroll: 0,
-  lastX: 0,
-  samples: [],
+  dragPeak: 0,
+  startX: 0,
+  startY: 0,
   /* PC 阅读菜单 */
   menuTimer: 0,
 };
@@ -91,11 +93,12 @@ export async function openReader(bookId) {
   S.page = 0;
   S.pages = 1;
   S.dragged = false;
-  clearTimeout(S.snapTimer);
+  clearTimeout(S.settleTimer);
   clearTimeout(S.menuTimer);
+  cancelPageAnim();
   S.touching = false;
-  S.vel = 0;
-  S.samples.length = 0;
+  S.dragging = false;
+  S.dragPeak = 0;
   if (els.menuPop) {
     els.menuPop.hidden = true;
     els.menuPop.classList.remove('is-out');
@@ -126,8 +129,9 @@ export async function closeReader() {
   clearTimeout(S.chromeTimer);
   clearTimeout(S.saveTimer);
   clearTimeout(S.badgeTimer);
-  clearTimeout(S.snapTimer);
+  clearTimeout(S.settleTimer);
   clearTimeout(S.menuTimer);
+  cancelPageAnim();
   clearInterval(S.clockTimer);
   await saveProgress();
   S.book = null;
@@ -242,8 +246,11 @@ function setPage(n, smooth = false) {
   const target = clamp(n, 0, S.pages - 1);
   S.page = target;
   const left = target * S.pageW;
-  if (Math.abs(els.stage.scrollLeft - left) > 1) {
-    els.stage.scrollTo({ left, behavior: smooth ? 'smooth' : 'auto' });
+  if (smooth) {
+    animateScrollTo(left);
+  } else {
+    cancelPageAnim();
+    if (Math.abs(els.stage.scrollLeft - left) > 1) els.stage.scrollLeft = left;
   }
   updateUI();
   showBadge();
@@ -281,78 +288,62 @@ function turn(dir) {
   }
 }
 
-/* ══ 翻页手势：手指抬稳、惯性停稳之后再吸附 ═════════════ */
+/* ══ 翻页手势：滑动不论轻重、快慢，一次只翻一页 ═══════════ */
 
-/** 停止滚动多久后开始吸附（给惯性滚动留出起步时间） */
-const SNAP_DELAY = 160;
-/** 只要横向滑动超过页宽的这个比例，就认作一次翻页，不再要求过半 */
-const SWIPE_MIN = 0.12;
-/** 甩动速度门槛 px/ms（350px/s）：距离差一点点，但甩得够快也算翻页 */
-const FLICK_V = 0.35;
+/** 横向位移超过这么多像素，就认作一次翻页（用来区分「点击」和「滑动」） */
+const SWIPE_MIN = 10;
+/** 翻一页动画的基准时长（毫秒） */
+const FLIP_MS = 240;
+
+let pageRaf = 0;
+
+function cancelPageAnim() {
+  if (pageRaf) {
+    cancelAnimationFrame(pageRaf);
+    pageRaf = 0;
+  }
+  S.animating = false;
+}
+
+/** 用自己的 rAF 补间翻页：起止都稳，不会像原生惯性滚动那样中途顿一下 */
+function animateScrollTo(left, done) {
+  cancelPageAnim();
+  const from = els.stage.scrollLeft;
+  const dist = left - from;
+  if (Math.abs(dist) < 1) {
+    els.stage.scrollLeft = left;
+    done?.();
+    return;
+  }
+  const dur = clamp((Math.abs(dist) / (S.pageW || 1)) * FLIP_MS, 140, 320);
+  const t0 = performance.now();
+  S.animating = true;
+  const step = (now) => {
+    const p = clamp((now - t0) / dur, 0, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    els.stage.scrollLeft = from + dist * eased;
+    if (p < 1) {
+      pageRaf = requestAnimationFrame(step);
+    } else {
+      pageRaf = 0;
+      S.animating = false;
+      done?.();
+    }
+  };
+  pageRaf = requestAnimationFrame(step);
+}
 
 function pageAtScroll() {
   return S.pageW ? clamp(Math.round(els.stage.scrollLeft / S.pageW), 0, S.pages - 1) : S.page;
 }
 
-/** 用最近约 100ms 的横向位移估算速度（px/ms，正数＝朝下一页甩） */
-function releaseVelocity() {
-  const s = S.samples;
-  if (s.length < 2) return 0;
-  const last = s[s.length - 1];
-  for (let i = s.length - 1; i >= 0; i--) {
-    const dt = last.t - s[i].t;
-    if (dt >= 100) return (last.x - s[i].x) / dt;
-  }
-  const dt = last.t - s[0].t;
-  return dt > 0 ? (last.x - s[0].x) / dt : 0;
-}
-
-function scheduleSnap(delay = SNAP_DELAY) {
-  clearTimeout(S.snapTimer);
-  S.snapTimer = setTimeout(snapNow, delay);
-}
-
-function snapNow() {
-  if (!S.book || S.mode !== 'page' || !S.pageW) return;
-  // 手指还按在屏上：绝不动它，等抬手再算（老版本在这里会跟手指抢）
-  if (S.touching) return scheduleSnap();
-
-  // 位置还在动（惯性没停、或正赶上了卡顿掉帧）→ 再等 80ms，绝不中途截停
-  const x = els.stage.scrollLeft;
-  if (Math.abs(x - S.lastX) > 0.5) {
-    S.lastX = x;
-    return scheduleSnap(80);
-  }
-
-  const base = els.stage.scrollLeft / S.pageW;
-  const byPos = clamp(Math.round(base), 0, S.pages - 1);
-  let n = byPos;
-
-  // 这是一次「滑动」吗？滑动就干脆翻过去，不比谁力气大。
-  // 距离够（≥ 12% 页宽）或甩得够快（≥ 350px/s）都算；
-  // 判定用的是「起手那一页」，所以不会连翻两页，也不会半路弹回去。
-  const delta = els.stage.scrollLeft - S.startScroll;
-  const travelled = Math.abs(delta);
-  const swiped =
-    travelled >= S.pageW * SWIPE_MIN ||
-    // 甩得快也算，但要真挪了地方，免得打字似的抖一下就翻页
-    (Math.abs(S.vel) >= FLICK_V && travelled >= S.pageW * 0.05);
-  if (swiped) {
-    const dir = delta !== 0 ? Math.sign(delta) : S.vel > 0 ? 1 : -1;
-    if (Math.sign(byPos - S.startPage) !== dir) n = clamp(S.startPage + dir, 0, S.pages - 1);
-  }
-  S.vel = 0;
-
-  const left = n * S.pageW;
-  if (Math.abs(els.stage.scrollLeft - left) > 2) {
-    els.stage.scrollTo({ left, behavior: 'smooth' });
-  }
-  if (n !== S.page) {
-    S.page = n;
-    updateUI();
-    showBadge();
-    vibrate(5);
-  }
+/** 外部滚动（滚轮 / 触控板）停下后，悄悄吸附到最近一页 */
+function scheduleSettle(delay = 120) {
+  clearTimeout(S.settleTimer);
+  S.settleTimer = setTimeout(() => {
+    if (!S.book || S.mode !== 'page' || !S.pageW || S.touching || S.animating) return;
+    setPage(pageAtScroll());
+  }, delay);
 }
 
 /* ══ 进度 ═════════════════════════════════════════════════ */
@@ -544,6 +535,8 @@ function resetStreamLayout() {
 function setMode(mode, { silent = false } = {}) {
   S.mode = mode === 'page' ? 'page' : 'scroll';
   els.reader.dataset.mode = S.mode;
+  cancelPageAnim();
+  clearTimeout(S.settleTimer);
   els.stage.scrollTop = 0;
   els.stage.scrollLeft = 0;
   els.badge.hidden = S.mode !== 'page';
@@ -841,47 +834,46 @@ export function initReader() {
     else openTOC();
   });
 
-  /* 点击 / 拖动：记录采样，抬手时算出甩动速度 */
-  let px = 0;
-  let py = 0;
-
-  const noteSample = () => {
-    const now = performance.now();
-    const x = els.stage.scrollLeft;
-    const s = S.samples;
-    const last = s[s.length - 1];
-    if (last && now - last.t < 16) {
-      last.t = now;
-      last.x = x;
-      return;
-    }
-    s.push({ t: now, x });
-    if (s.length > 16) s.shift();
-  };
-
+  /* 滑动翻页：按下时锁定起始页，滑动方向只决定翻哪一页，一次滑动只翻一页 */
   els.stage.addEventListener(
     'pointerdown',
     (e) => {
-      px = e.clientX;
-      py = e.clientY;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      S.startX = e.clientX;
+      S.startY = e.clientY;
       S.dragged = false;
       S.touching = true;
-      S.vel = 0;
-      S.startScroll = els.stage.scrollLeft;
+      if (S.mode !== 'page' || !S.pageW) return;
+      // 有正在补间的翻页就立刻停下，手指说了算
+      cancelPageAnim();
+      clearTimeout(S.settleTimer);
+      S.dragging = false;
       S.startPage = pageAtScroll();
-      S.lastX = S.startScroll;
-      S.samples.length = 0;
-      noteSample();
-      // 手指按住期间绝不吸附，否则拖到一半会被拽回去
-      clearTimeout(S.snapTimer);
+      S.startScroll = els.stage.scrollLeft;
+      S.dragPeak = 0;
     },
     { passive: true }
   );
+
   els.stage.addEventListener(
     'pointermove',
     (e) => {
-      if (Math.abs(e.clientX - px) > 9 || Math.abs(e.clientY - py) > 9) S.dragged = true;
-      if (S.touching) noteSample();
+      if (!S.touching) return;
+      const dx = e.clientX - S.startX;
+      const dy = e.clientY - S.startY;
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
+      if (!S.dragged && (adx > 8 || ady > 8)) S.dragged = true;
+      if (S.mode !== 'page' || !S.pageW) return;
+
+      // 横向明显压过纵向，才算一次翻页手势（避免竖着划拉也翻页）
+      if (!S.dragging && adx > SWIPE_MIN && adx > ady) S.dragging = true;
+      if (!S.dragging) return;
+
+      // 最多跟着手指挪一页，绝不露出第三页
+      const clamped = clamp(dx, -S.pageW, S.pageW);
+      if (Math.abs(clamped) > Math.abs(S.dragPeak)) S.dragPeak = clamped;
+      els.stage.scrollLeft = clamp(S.startScroll - clamped, 0, (S.pages - 1) * S.pageW);
     },
     { passive: true }
   );
@@ -890,12 +882,36 @@ export function initReader() {
   const endDrag = () => {
     if (!S.touching) return;
     S.touching = false;
-    noteSample();
-    S.vel = releaseVelocity();
-    S.lastX = els.stage.scrollLeft;
-    S.samples.length = 0;
-    // 留 170ms 让惯性滚起来，之后由 scroll 事件不断顺延，停稳才吸附
-    scheduleSnap(170);
+    if (S.mode !== 'page' || !S.dragging) {
+      S.dragging = false;
+      return;
+    }
+    S.dragging = false;
+
+    // 方向只看这次手势的峰值位移：滑过就算，不看手劲快慢、也不看最后停在哪儿
+    const dir = S.dragPeak > 0 ? -1 : 1; // 手指右滑 → 上一页
+    const target = S.startPage + dir;
+
+    if (target < 0) {
+      if (S.index > 0) {
+        vibrate(8);
+        gotoChapter(S.index - 1, { ratio: 1 });
+      } else {
+        setPage(0);
+      }
+      return;
+    }
+    if (target > S.pages - 1) {
+      if (S.index < chapterCount() - 1) {
+        vibrate(8);
+        gotoChapter(S.index + 1);
+      } else {
+        setPage(S.pages - 1);
+      }
+      return;
+    }
+    setPage(target, true);
+    vibrate(5);
   };
   window.addEventListener('pointerup', endDrag);
   window.addEventListener('pointercancel', endDrag);
@@ -926,15 +942,9 @@ export function initReader() {
     () => {
       if (!S.book) return;
       if (S.mode === 'page') {
-        if (!S.pageW) return;
-        const n = clamp(Math.round(els.stage.scrollLeft / S.pageW), 0, S.pages - 1);
-        if (n !== S.page) {
-          S.page = n;
-          updateUI();
-          showBadge();
-        }
-        // 每次滚动都顺延吸附计时：只有停下来 160ms 才会去吸
-        scheduleSnap();
+        // 自己拖的、自己补间的滚动不处理；剩下的（滚轮 / 触控板）停下后轻轻吸附
+        if (!S.pageW || S.touching || S.animating) return;
+        scheduleSettle();
       }
       // 滚动模式的进度保存节流
       const now = Date.now();

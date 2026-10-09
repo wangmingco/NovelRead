@@ -146,8 +146,9 @@ function wire() {
     const btn = e.target.closest('button');
     if (!btn) return;
 
-    if (btn.dataset.seg) {
-      const key = btn.dataset.seg;
+    const seg = btn.closest('[data-seg]');
+    if (seg) {
+      const key = seg.dataset.seg;
       const value = btn.dataset.val;
       if (key === 'mode' && settings.mode !== value) {
         setSettings({ mode: value });

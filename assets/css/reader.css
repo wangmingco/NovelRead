@@ -53,7 +53,7 @@ body.is-reading { overscroll-behavior: none; }
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
-  touch-action: pan-x;
+  touch-action: none;
   scrollbar-width: none;
   padding: var(--chrome-h) calc(21px + var(--safe-r))
            calc(var(--safe-b) + 44px) calc(21px + var(--safe-l));
