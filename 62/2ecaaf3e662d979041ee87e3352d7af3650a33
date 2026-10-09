@@ -1,0 +1,30 @@
+assets/js/settings-panel.js
+  s_2c3d090ad4b8be::t_26fa94c3dfc006 149-151
+assets/js/reader.js
+  s_2c3d090ad4b8be::t_a5b96ff544db3e 249-253
+  s_2c3d090ad4b8be::t_1c6b9a76991832 291,293-296,298,300-303,305,308-316,318-334,336-338,340-346
+  s_2c3d090ad4b8be::t_7981fbad486ecf 538-539
+  s_2c3d090ad4b8be::t_da068bec969918 837,841-843,846-850,852-853,857,861-876,885-914
+  s_2c3d090ad4b8be::t_65cffa812f9474 945-947
+  s_2c3d090ad4b8be::t_214abdbfab74b1 96,98,100-101
+  s_2c3d090ad4b8be::t_493bc851015e64 132,134
+  s_2c3d090ad4b8be::t_4e78edf287251e 40,42-43,46-48
+assets/css/reader.css
+  s_2c3d090ad4b8be::t_b63c3539115fbe 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.5.3",
+  "base_commit_sha": "622ecaaf3e662d979041ee87e3352d7af3650a33",
+  "prompts": {},
+  "sessions": {
+    "s_2c3d090ad4b8be": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee166a54affebtUp0pQPVY7guJ",
+        "model": "unknown"
+      },
+      "human_author": "wangming <wangming.co@hotmail.com>"
+    }
+  }
+}
