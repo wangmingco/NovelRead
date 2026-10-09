@@ -24,10 +24,6 @@ const backdrop = $('#backdrop');
 let openEl = null;
 let closing = false;
 
-export function currentSheet() {
-  return openEl;
-}
-
 export function openSheet(target) {
   const sheet = typeof target === 'string' ? document.getElementById(target) : target;
   if (!sheet || sheet === openEl) return sheet;
@@ -62,8 +58,9 @@ export function closeSheet() {
   sheet.classList.remove('is-open');
   backdrop.classList.remove('is-open');
   setTimeout(() => {
-    sheet.hidden = true;
-    backdrop.hidden = true;
+    // 关闭动画期间可能又打开了别的抽屉：别把新抽屉的背景一起收掉
+    if (openEl !== sheet) sheet.hidden = true;
+    if (!openEl) backdrop.hidden = true;
     closing = false;
   }, 380);
 }
@@ -122,8 +119,6 @@ export function confirmDialog({ title = '确认', message = '', confirmText = '�
     const sheet = document.createElement('section');
     sheet.className = 'sheet';
     sheet.hidden = true;
-    sheet.dataset.noAutofocus = '1';
-    sheet.dataset.noAutofocus = '1';
     sheet.innerHTML = `
       <div class="sheet-panel">
         <div class="grab"></div>
@@ -180,7 +175,7 @@ export function paletteFor(id) {
   return PALETTES[hash(id) % PALETTES.length];
 }
 
-export function sealChar(title) {
+function sealChar(title) {
   const clean = String(title || '书').replace(/[《》〈〉\s·,.，。]/g, '');
   return clean.charAt(0) || '书';
 }

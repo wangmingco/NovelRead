@@ -66,11 +66,11 @@ export function onSettings(fn) {
   bus.addEventListener('change', (e) => fn(e.detail));
 }
 
-export function leadingValue() {
+function leadingValue() {
   return (LEADINGS.find((l) => l.id === settings.leading) || LEADINGS[1]).value;
 }
 
-export function fontFamily() {
+function fontFamily() {
   return (FONTS.find((f) => f.id === settings.font) || FONTS[0]).css;
 }
 
@@ -98,11 +98,4 @@ export function setSettings(patch, { silent = false } = {}) {
   }
   applySettings();
   if (!silent) bus.dispatchEvent(new CustomEvent('change', { detail: patch }));
-}
-
-export function resetSettings() {
-  const d = defaults();
-  d.theme = settings.theme;
-  d.mode = settings.mode;
-  setSettings(d);
 }

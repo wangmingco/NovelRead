@@ -353,20 +353,6 @@ html[data-theme='ink']   { --hero-bg: linear-gradient(142deg, #17171a 0%, #0a0a0
   gap: 6px;
 }
 .cover-state .icon { width: 22px; height: 22px; margin: 0 auto 6px; }
-.cover-ring { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; }
-.cover-ring .ring-wrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: rgba(10, 8, 6, 0.5);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  font-size: 11px;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-}
 .cover-progress {
   position: absolute;
   left: 0; right: 0; bottom: 0;

@@ -92,24 +92,6 @@ export async function idbDelete(name, key) {
   return reqAsPromise((await store(name, 'readwrite')).delete(key));
 }
 
-export async function idbCount(name) {
-  return reqAsPromise((await store(name)).count());
-}
-
-/** 一次事务写入多条，快得多 */
-export async function idbBulkPut(name, values) {
-  if (!values.length) return;
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(name, 'readwrite');
-    const s = tx.objectStore(name);
-    for (const v of values) s.put(v);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error || new Error('写入被中止'));
-  });
-}
-
 export async function idbClear(name) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -141,7 +123,7 @@ export async function idbRemoveBook(bookId) {
 
 /* ── 书籍分片存储 ───────────────────────────────────────── */
 
-export const chunkId = (bookId, index) => `${bookId}#${index}`;
+const chunkId = (bookId, index) => `${bookId}#${index}`;
 
 export function getChunk(bookId, index) {
   return idbGet('chunks', chunkId(bookId, index));

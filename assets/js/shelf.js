@@ -85,7 +85,7 @@ function getItem(id) {
   return library().find((b) => b.id === id) || null;
 }
 
-export function lastRead() {
+function lastRead() {
   let bestId = null;
   let bestAt = -1;
   for (const [id, p] of state.progress) {
@@ -108,10 +108,6 @@ export function lastRead() {
   const item = getItem(bestId);
   if (!item) return null;
   return { item, progress: state.progress.get(bestId) || null };
-}
-
-export function isDownloaded(id) {
-  return state.books.has(id);
 }
 
 /* ── 渲染 ───────────────────────────────────────────────── */
@@ -333,7 +329,7 @@ function paintDownload(id, info) {
 
 /* ── 书籍详情 ───────────────────────────────────────────── */
 
-export async function openBookDetail(id) {
+async function openBookDetail(id) {
   const item = getItem(id);
   if (!item) return;
   const rec = item.record;

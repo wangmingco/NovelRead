@@ -13,7 +13,7 @@
 
 import { safeJson, nextFrame } from './util.js';
 
-export const MANIFEST_URL = 'data/books.json';
+const MANIFEST_URL = 'data/books.json';
 
 /** 章节在浏览器里的分片大小：一次只解压/载入这么多章 */
 export const SHARD_SIZE = 40;
@@ -300,12 +300,12 @@ function pipeThrough(bytes, format) {
   return new Response(stream).text();
 }
 
-export function gunzip(bytes) {
+function gunzip(bytes) {
   return pipeThrough(bytes, 'gzip');
 }
 
 /** 极简 zip 读取：挑出体积最大的文本文件解出来（无需任何第三方库） */
-export async function unzip(bytes) {
+async function unzip(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const u32 = (o) => view.getUint32(o, true);
   const u16 = (o) => view.getUint16(o, true);
@@ -358,7 +358,7 @@ export async function unzip(bytes) {
  * 依次识别 gzip / zip；如果服务器已经帮我们解过压（Content-Encoding），
  * 拿到的就是纯文本，直接按 UTF-8 解码。
  */
-export async function bytesToText(bytes) {
+async function bytesToText(bytes) {
   if (isGzip(bytes)) return gunzip(bytes);
   if (isZip(bytes)) return unzip(bytes);
   return new TextDecoder('utf-8').decode(bytes);
@@ -371,7 +371,7 @@ export async function bytesToText(bytes) {
  * @param {(info: {ratio: number, received: number, total: number}) => void} [onProgress]
  * @returns {Promise<Uint8Array>} 原始字节（可能还是压缩状态）
  */
-export async function fetchBytes(url, onProgress) {
+async function fetchBytes(url, onProgress) {
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error(`下载失败（HTTP ${res.status}）`);
 
@@ -416,7 +416,7 @@ export async function fetchBytes(url, onProgress) {
  * 关键：不能拿清单文件自身的地址当 base —— 否则 /data/books.json 会被当成目录，
  * 解析出 /data/data/books/xxx.json.gz 这种 404 地址。
  */
-export function resolveBookUrl(item, manifestUrl = MANIFEST_URL) {
+function resolveBookUrl(item, manifestUrl = MANIFEST_URL) {
   const raw = String(item.url || '');
   const out = [];
   const push = (u) => {
@@ -482,7 +482,7 @@ export async function downloadBook(item, onProgress) {
 export function normalizeManifest(raw) {
   const books = Array.isArray(raw) ? raw : raw?.books || raw?.list || [];
   return books
-    .filter((b) => b && b.id && b.url !== undefined)
+    .filter((b) => b && b.id)
     .map((b) => ({
       id: String(b.id),
       title: String(b.title || b.name || '未命名'),

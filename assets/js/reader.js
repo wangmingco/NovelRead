@@ -139,10 +139,6 @@ export async function closeReader() {
   S.shards.clear();
 }
 
-export function currentBookId() {
-  return S.book?.id || null;
-}
-
 /** 立即落盘阅读位置（切后台、关闭页面前调用） */
 export function flushProgress() {
   return saveProgress();
@@ -197,7 +193,7 @@ async function renderChapter({ ratio = 0, smooth = false } = {}) {
   markTOCActive();
 }
 
-export async function gotoChapter(i, { ratio = 0 } = {}) {
+async function gotoChapter(i, { ratio = 0 } = {}) {
   if (!S.book) return;
   const next = clamp(i, 0, chapterCount() - 1);
   S.index = next;
@@ -863,7 +859,7 @@ export function initReader() {
       const dy = e.clientY - S.startY;
       const adx = Math.abs(dx);
       const ady = Math.abs(dy);
-      if (!S.dragged && (adx > 8 || ady > 8)) S.dragged = true;
+      if (!S.dragged && (adx > SWIPE_MIN || ady > 8)) S.dragged = true;
       if (S.mode !== 'page' || !S.pageW) return;
 
       // 横向明显压过纵向，才算一次翻页手势（避免竖着划拉也翻页）
@@ -943,8 +939,7 @@ export function initReader() {
       if (!S.book) return;
       if (S.mode === 'page') {
         // 自己拖的、自己补间的滚动不处理；剩下的（滚轮 / 触控板）停下后轻轻吸附
-        if (!S.pageW || S.touching || S.animating) return;
-        scheduleSettle();
+        if (S.pageW && !S.touching && !S.animating) scheduleSettle();
       }
       // 滚动模式的进度保存节流
       const now = Date.now();

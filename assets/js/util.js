@@ -5,11 +5,6 @@
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-export function on(el, type, fn, opts) {
-  el.addEventListener(type, fn, opts);
-  return () => el.removeEventListener(type, fn, opts);
-}
-
 export function debounce(fn, wait = 200) {
   let t = 0;
   return function (...args) {
@@ -26,7 +21,7 @@ export function nextFrame() {
   return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 }
 
-export const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
 }
