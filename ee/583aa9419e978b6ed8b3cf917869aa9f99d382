@@ -1,0 +1,40 @@
+assets/js/api.js
+  s_2c3d090ad4b8be::t_638e34bb5b7bb9 16
+  s_2c3d090ad4b8be::t_cd293f560b3aaa 485
+  s_2c3d090ad4b8be::t_8b0e9c2f4c1192 374
+  s_2c3d090ad4b8be::t_4450c763d5c25c 303,308
+  s_2c3d090ad4b8be::t_14e41205b7c327 361
+  s_2c3d090ad4b8be::t_33bc014871fcd0 419
+assets/js/store.js
+  s_2c3d090ad4b8be::t_663c505c9aafa9 69,73
+assets/js/db.js
+  s_2c3d090ad4b8be::t_40747d58286bb3 126
+assets/js/ui.js
+  s_2c3d090ad4b8be::t_08976d9fd59600 178
+  s_2c3d090ad4b8be::t_370483c3259395 61-63
+assets/js/shelf.js
+  s_2c3d090ad4b8be::t_9302f2e37978cf 88
+  s_2c3d090ad4b8be::t_a09307739f89af 332
+assets/js/util.js
+  s_2c3d090ad4b8be::t_fc085e6a8fa46b 24
+assets/js/reader.js
+  s_2c3d090ad4b8be::t_392a654ad2d09c 942
+  s_2c3d090ad4b8be::t_4ebf6a227cfdf1 196
+  s_2c3d090ad4b8be::t_58fc71125fbe92 862
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "development:1.5.3",
+  "base_commit_sha": "ee583aa9419e978b6ed8b3cf917869aa9f99d382",
+  "prompts": {},
+  "sessions": {
+    "s_2c3d090ad4b8be": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_ee166a54affebtUp0pQPVY7guJ",
+        "model": "unknown"
+      },
+      "human_author": "wangming <wangming.co@hotmail.com>"
+    }
+  }
+}
